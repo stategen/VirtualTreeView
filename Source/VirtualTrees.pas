@@ -3703,8 +3703,9 @@ begin
   if WasValidating then
   begin
     // Make sure we dequeue the two synchronized calls from ChangeTreeStatesAsync(), fixes mem leak and AV reported in issue #1001, but is more a workaround.
-    while CheckSynchronize() do
-      Sleep(1);
+    if not IsLibrary then
+        while CheckSynchronize() do
+          Sleep(1);
   end;// if
   FOptions.InternalSetMiscOptions(FOptions.MiscOptions - [toReadOnly]); //SetMiscOptions has side effects
   // Make sure there is no reference remaining to the releasing tree.
@@ -5021,7 +5022,7 @@ end;
 function TBaseVirtualTree.GetTotalCount(): Cardinal;
 
 begin
-  Assert(GetCurrentThreadId = MainThreadId, 'UI controls may only be used in UI thread.'); // FUpdateCount is not thread-safe! So do not write it in non-UI threads.
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be used in UI thread.'); // FUpdateCount is not thread-safe! So do not write it in non-UI threads.
   Inc(FUpdateCount);
   try
     ValidateNode(FRoot, True);
@@ -6022,8 +6023,8 @@ begin
   begin
     if Node = nil then
       Node := FRoot;
-
-    Assert(GetCurrentThreadId = MainThreadId, 'UI controls may only be changed in UI thread.');
+	  
+    Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be changed in UI thread.');
     if NewChildCount = 0 then
       DeleteChildren(Node)
     else
@@ -9141,7 +9142,7 @@ var
   DC: HDC;
   R: TRect;
   Flags: DWORD;
-  ExStyle: Integer;
+  ExStyle: NativeInt;
   TempRgn: HRGN;
   BorderWidth,
   BorderHeight: Integer;
@@ -13289,7 +13290,7 @@ function TBaseVirtualTree.GetBorderDimensions: TSize;
 // (e.g. bevels, border width).
 
 var
-  Styles: Integer;
+  Styles: NativeInt;
 
 begin
   Result.cx := 0;
@@ -16322,7 +16323,7 @@ begin
   if not FSelectionLocked then
   begin
     Assert(Assigned(Node), 'Node must not be nil!');
-    Assert(GetCurrentThreadId = MainThreadId, Self.Classname + '.RemoveFromSelection() must only be called from UI thread.');
+    Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), Self.Classname + '.RemoveFromSelection() must only be called from UI thread.');
     if vsSelected in Node.States then
     begin
       Assert(FSelectionCount > 0, 'if one node has set the vsSelected flag, SelectionCount must be >0.');
@@ -17095,7 +17096,7 @@ begin
   if (tsEditing in FStates) and Assigned(FFocusedNode) and
      (FEditColumn < FHeader.Columns.Count) then // prevent EArgumentOutOfRangeException
   begin
-    if (GetCurrentThreadId <> MainThreadID) then
+    if not IsLibrary and (GetCurrentThreadId <> MainThreadID) then
     begin
       // UpdateEditBounds() will be called at the end of the thread
       Exit;
@@ -17724,7 +17725,7 @@ end;
 procedure TBaseVirtualTree.BeginUpdate;
 
 begin
-  Assert(GetCurrentThreadId = MainThreadId, 'UI controls like ' + Classname + ' should only be manipulated through the main thread.');
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls like ' + Classname + ' should only be manipulated through the main thread.');
   if not (csDestroying in ComponentState) then
   begin
     if FUpdateCount = 0 then
@@ -17899,7 +17900,7 @@ var
   Counter: Integer;
 
 begin
-  Assert(GetCurrentThreadId = MainThreadId, Self.Classname + '.ClearSelection() must only be called from UI thread.');
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), Self.Classname + '.ClearSelection() must only be called from UI thread.');
   if not FSelectionLocked and (FSelectionCount > 0) and not (csDestroying in ComponentState) then
   begin
     if (FUpdateCount = 0) and HandleAllocated and (FVisibleCount > 0) then
@@ -21483,7 +21484,7 @@ function TBaseVirtualTree.InvalidateNode(Node: PVirtualNode): TRect;
 
 begin
   Assert(Assigned(Node), 'Node must not be nil.');
-  Assert(GetCurrentThreadId = MainThreadId, 'UI controls may only be chnaged in UI thread.');
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be chnaged in UI thread.');
   // Reset height measured flag too to cause a re-issue of the OnMeasureItem event.
   Exclude(Node.States, vsHeightMeasured);
   if (FUpdateCount = 0) and HandleAllocated then
@@ -21799,7 +21800,7 @@ begin
     begin
       NewNodeHeight := Node.NodeHeight;
       // Anonymous methods help to make this thread safe easily. 
-      if (MainThreadId <> GetCurrentThreadId) then
+      if not IsLibrary and (MainThreadId <> GetCurrentThreadId) then
         TThread.Synchronize(nil,
           procedure
           begin
@@ -24327,9 +24328,8 @@ begin
   UpdateVerticalRange;
 
   if (IsUpdating) then
-    Exit;
-  Assert(GetCurrentThreadId = MainThreadId, 'UI controls like ' + Classname + ' and its scrollbars should only be manipulated through the main thread.');
-
+    Exit;    
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls like ' + Classname + ' and its scrollbars should only be manipulated through the main thread.');
   if FScrollBarOptions.ScrollBars in [ssVertical, ssBoth] then
   begin
     ScrollInfo.cbSize := SizeOf(ScrollInfo);

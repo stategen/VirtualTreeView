@@ -4838,7 +4838,7 @@ end;
 function TVirtualTreeColumns.Add : TVirtualTreeColumn;
 
 begin
-  Assert(GetCurrentThreadId = MainThreadId, 'UI controls may only be changed in UI thread.');
+  Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be changed in UI thread.');
   Result := TVirtualTreeColumn(inherited Add);
 end;
 
