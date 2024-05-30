@@ -2649,7 +2649,7 @@ begin
         Break;
 
       ToGo := Min(ToGo, MaxDelta);
-      Difference := ToGo div ColCount;
+      Difference := ToGo div ColCount;   //division zero checked
       Rest := ToGo mod ColCount;
 
       if Difference > 0 then
@@ -4882,7 +4882,7 @@ begin
       with TreeViewControl do
         try
           Steps := 32;
-          DX := (NewWidth - OldWidth) div Steps;
+          DX := (NewWidth - OldWidth) div Steps;  //division zero checked
 
         // Determination of the scroll rectangle is a bit complicated since we neither want
         // to scroll the scrollbars nor the border of the treeview window.

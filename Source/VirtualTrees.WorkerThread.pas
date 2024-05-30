@@ -123,7 +123,8 @@ begin
   while FCurrentTree = Tree do
   begin
     Sleep(1); // Don't do busy waiting, let the OS scheduler give other threads a time slice
-    CheckSynchronize(); // We need to call CheckSynchronize here because we are using TThread.Synchronize in TBaseVirtualTree.MeasureItemHeight() and ChangeTreeStatesAsync()
+    if not IsLibrary then  //xia com+,ui thread maybe not the mainthread    
+       CheckSynchronize(); // We need to call CheckSynchronize here because we are using TThread.Synchronize in TBaseVirtualTree.MeasureItemHeight() and ChangeTreeStatesAsync()
   end;
 end;
 

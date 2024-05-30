@@ -2855,7 +2855,7 @@ begin
       lOneImage.Height := IL.Height;
       MaskColor := lImages.Canvas.Pixels[0, 0]; // this is usually clFuchsia
       Dest := Rect(0, 0, IL.Width, IL.Height);
-      for I := 0 to (lImages.Width div lImages.Height) - 1 do
+      for I := 0 to (lImages.Width div lImages.Height) - 1 do  //division zero checked
       begin
         Source := Rect(I * IL.Width, 0, (I + 1) * IL.Width, IL.Height);
         lOneImage.Canvas.CopyRect(Dest, lImages.Canvas, Source);
@@ -3703,7 +3703,7 @@ begin
   if WasValidating then
   begin
     // Make sure we dequeue the two synchronized calls from ChangeTreeStatesAsync(), fixes mem leak and AV reported in issue #1001, but is more a workaround.
-    if not IsLibrary then
+    if not IsLibrary then    //xia com+,ui thread maybe not the mainthread 
         while CheckSynchronize() do
           Sleep(1);
   end;// if
@@ -5022,6 +5022,7 @@ end;
 function TBaseVirtualTree.GetTotalCount(): Cardinal;
 
 begin
+  //xia com+,ui thread maybe not the mainthread  
   Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be used in UI thread.'); // FUpdateCount is not thread-safe! So do not write it in non-UI threads.
   Inc(FUpdateCount);
   try
@@ -6023,7 +6024,7 @@ begin
   begin
     if Node = nil then
       Node := FRoot;
-	  
+    //xia com+,ui thread maybe not the mainthread 	  
     Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be changed in UI thread.');
     if NewChildCount = 0 then
       DeleteChildren(Node)
@@ -7080,15 +7081,21 @@ begin
     PrepareBackGroundPicture(Source, DrawBitmap, Source.Width, Source.Height, aBkgColor);
     with Target do
     begin
-      SourceY := (R.Top + Offset.Y + FBackgroundOffsetY) mod Source.Height;
+      if (Source.Height = 0 ) then
+        Exit;
+         
+      SourceY := (R.Top + Offset.Y + FBackgroundOffsetY) mod Source.Height;   //division zero checked
       // Always wrap the source coordinates into positive range.
       if SourceY < 0 then
         SourceY := Source.Height + SourceY;
 
       // Tile image vertically until target rect is filled.
+      if (Source.Width = 0 ) then
+        Exit;
+      
       while R.Top < R.Bottom do
       begin
-        SourceX := (R.Left + Offset.X + FBackgroundOffsetX) mod Source.Width;
+        SourceX := (R.Left + Offset.X + FBackgroundOffsetX) mod Source.Width;   //division zero checked
         // always wrap the source coordinates into positive range
         if SourceX < 0 then
           SourceX := Source.Width + SourceX;
@@ -9142,7 +9149,7 @@ var
   DC: HDC;
   R: TRect;
   Flags: DWORD;
-  ExStyle: NativeInt;
+  ExStyle: NativeInt; //xia x64
   TempRgn: HRGN;
   BorderWidth,
   BorderHeight: Integer;
@@ -9848,13 +9855,13 @@ begin
       // Determine the initial step size which is either 1 if the needed steps are less than the number of
       // steps possible given by the duration or > 1 otherwise.
       StepSize := Round(Max(1, RemainingSteps / Duration));
-      RemainingSteps := RemainingSteps div StepSize;
+      RemainingSteps := RemainingSteps div StepSize;   //division zero checked
       CurrentStep := 0;
 
       while (RemainingSteps > 0) and (RemainingTime > 0) and not Application.Terminated do
       begin
         StartTime := timeGetTime;
-        NextTimeStep := StartTime + RemainingTime div RemainingSteps;
+        NextTimeStep := StartTime + RemainingTime div RemainingSteps;   //division zero checked
         if not Callback(CurrentStep, StepSize, Data) then
           Break;
 
@@ -9877,12 +9884,12 @@ begin
         end;
         // If the remaining time per step is less than one time step then we have to decrease the
         // step count and increase the step size.
-        if (RemainingSteps > 0) and ((RemainingTime div RemainingSteps) < 1) then
+        if (RemainingSteps > 0) and ((RemainingTime div RemainingSteps) < 1) then   //division zero checked
         begin
           repeat
             Inc(StepSize);
             RemainingSteps := RemainingTime div StepSize;
-          until (RemainingSteps <= 0) or ((RemainingTime div RemainingSteps) >= 1);
+          until (RemainingSteps <= 0) or ((RemainingTime div RemainingSteps) >= 1);    //division zero checked
         end;
         CurrentStep := Steps - RemainingSteps;
       end;
@@ -12672,7 +12679,7 @@ begin
         // If the cache is full then stop the loop.
         if (Integer(Index) >= Length(FPositionCache)) then
           Break;
-        if (EntryCount mod CacheThreshold) = 0 then
+        if (EntryCount mod CacheThreshold) = 0 then   //division zero checked
         begin
           // New cache entry to set up.
           with FPositionCache[Index] do
@@ -13290,7 +13297,7 @@ function TBaseVirtualTree.GetBorderDimensions: TSize;
 // (e.g. bevels, border width).
 
 var
-  Styles: NativeInt;
+  Styles: NativeInt;  //xia x64
 
 begin
   Result.cx := 0;
@@ -16323,6 +16330,7 @@ begin
   if not FSelectionLocked then
   begin
     Assert(Assigned(Node), 'Node must not be nil!');
+    //xia com+,ui thread maybe not the mainthread 
     Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), Self.Classname + '.RemoveFromSelection() must only be called from UI thread.');
     if vsSelected in Node.States then
     begin
@@ -17096,6 +17104,7 @@ begin
   if (tsEditing in FStates) and Assigned(FFocusedNode) and
      (FEditColumn < FHeader.Columns.Count) then // prevent EArgumentOutOfRangeException
   begin
+     //xia com+,ui thread maybe not the mainthread 
     if not IsLibrary and (GetCurrentThreadId <> MainThreadID) then
     begin
       // UpdateEditBounds() will be called at the end of the thread
@@ -17725,6 +17734,7 @@ end;
 procedure TBaseVirtualTree.BeginUpdate;
 
 begin
+  //xia com+,ui thread maybe not the mainthread  
   Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls like ' + Classname + ' should only be manipulated through the main thread.');
   if not (csDestroying in ComponentState) then
   begin
@@ -17900,6 +17910,7 @@ var
   Counter: Integer;
 
 begin
+  //xia com+,ui thread maybe not the mainthread  
   Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), Self.Classname + '.ClearSelection() must only be called from UI thread.');
   if not FSelectionLocked and (FSelectionCount > 0) and not (csDestroying in ComponentState) then
   begin
@@ -21484,6 +21495,7 @@ function TBaseVirtualTree.InvalidateNode(Node: PVirtualNode): TRect;
 
 begin
   Assert(Assigned(Node), 'Node must not be nil.');
+  //xia com+,ui thread maybe not the mainthread 
   Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls may only be chnaged in UI thread.');
   // Reset height measured flag too to cause a re-issue of the OnMeasureItem event.
   Exclude(Node.States, vsHeightMeasured);
@@ -21800,6 +21812,7 @@ begin
     begin
       NewNodeHeight := Node.NodeHeight;
       // Anonymous methods help to make this thread safe easily. 
+      //xia com+,ui thread maybe not the mainthread 
       if not IsLibrary and (MainThreadId <> GetCurrentThreadId) then
         TThread.Synchronize(nil,
           procedure
@@ -23584,8 +23597,8 @@ procedure TBaseVirtualTree.Sort(Node: PVirtualNode; Column: TColumnIndex; Direct
   begin
     if N > 1 then
     begin
-      A := MergeSortAscending(Node, N div 2);
-      B := MergeSortAscending(Node, (N + 1) div 2);
+      A := MergeSortAscending(Node, N shr 1);
+      B := MergeSortAscending(Node, (N + 1) shr 1);
       Result := MergeAscending(A, B);
     end
     else
@@ -23608,8 +23621,8 @@ procedure TBaseVirtualTree.Sort(Node: PVirtualNode; Column: TColumnIndex; Direct
   begin
     if N > 1 then
     begin
-      A := MergeSortDescending(Node, N div 2);
-      B := MergeSortDescending(Node, (N + 1) div 2);
+      A := MergeSortDescending(Node, N shr 1);
+      B := MergeSortDescending(Node, (N + 1) shr 1);
       Result := MergeDescending(A, B);
     end
     else
@@ -24328,7 +24341,8 @@ begin
   UpdateVerticalRange;
 
   if (IsUpdating) then
-    Exit;    
+    Exit; 
+  //xia com+,ui thread maybe not the mainthread       
   Assert(IsLibrary or (GetCurrentThreadId = MainThreadId), 'UI controls like ' + Classname + ' and its scrollbars should only be manipulated through the main thread.');
   if FScrollBarOptions.ScrollBars in [ssVertical, ssBoth] then
   begin
